@@ -1,0 +1,67 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+// Initialize LCD: I2C address 0x27, 16x2 display
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// Pin definitions
+const int soilPin = A0;       // Soil moisture sensor analog pin
+const int tempPin = A1;       // TMP36 temperature sensor analog pin
+const int motorPin1 = 9;      // L293D input 1
+const int motorPin2 = 10;     // L293D input 2
+const int enablePin = 8;      // L293D enable pin
+
+// Moisture threshold (adjust as needed)
+const int moistureThreshold = 400;
+
+void setup() {
+  Serial.begin(9600);
+  lcd.init();
+  lcd.backlight();
+
+  pinMode(motorPin1, OUTPUT);
+  pinMode(motorPin2, OUTPUT);
+  pinMode(enablePin, OUTPUT);
+
+  lcd.setCursor(0, 0);
+  lcd.print("Smart Irrigation");
+  delay(2000);
+  lcd.clear();
+}
+
+void loop() {
+  // Read soil moisture
+  int moistureValue = analogRead(soilPin);
+  // Read temperature (TMP36: 10 mV/°C, 500 mV offset)
+  int tempReading = analogRead(tempPin);
+  float voltage = tempReading * (5.0 / 1023.0);
+  float temperatureC = (voltage - 0.5) * 100.0;
+
+  // Display values on LCD
+  lcd.setCursor(0, 0);
+  lcd.print("Moist:");
+  lcd.print(moistureValue);
+  lcd.print("  ");
+
+  lcd.setCursor(0, 1);
+  lcd.print("Temp:");
+  lcd.print(temperatureC);
+  lcd.print("C   ");
+
+  // Control motor based on soil moisture
+  if (moistureValue > moistureThreshold) {
+    // Soil is dry – turn pump ON
+    digitalWrite(motorPin1, HIGH);
+    digitalWrite(motorPin2, LOW);
+    digitalWrite(enablePin, HIGH);
+    Serial.println("Pump ON");
+  } else {
+    // Soil is wet – turn pump OFF
+    digitalWrite(motorPin1, LOW);
+    digitalWrite(motorPin2, LOW);
+    digitalWrite(enablePin, LOW);
+    Serial.println("Pump OFF");
+  }
+
+  delay(1000);  // Delay for stability
+}
